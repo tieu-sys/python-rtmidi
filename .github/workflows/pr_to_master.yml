@@ -30,9 +30,7 @@ jobs:
     - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
-        name: sdist
         path: dist/*.tar.gz
-        compression-level: 0
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -40,7 +38,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
 
     - uses: actions/checkout@v4
@@ -51,10 +49,36 @@ jobs:
       if: matrix.os == 'windows-latest'
 
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.22
+      uses: pypa/cibuildwheel@v2.21
       env:
         # Skip trying to test arm64 builds on Intel Macs
         CIBW_TEST_SKIP: "*-macosx_arm64 *-macosx_universal2:arm64"
+
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        path: wheelhouse/*.whl
+
+  build_arch_wheels:
+    name: Build wheels on Linux ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [aarch64]
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - uses: docker/setup-qemu-action@v3
+      with:
+        platforms: all
+
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.21
+      env:
+        CIBW_ARCHS: ${{ matrix.arch }}
 
     - name: Verify clean directory
       run: git diff --exit-code
@@ -63,6 +87,4 @@ jobs:
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: bdist-${{ matrix.os }}
         path: wheelhouse/*.whl
-        compression-level: 0
